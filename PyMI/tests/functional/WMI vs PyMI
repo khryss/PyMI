@@ -1,0 +1,32 @@
+WMI vs PyMI:
+--------------
+
+	Unsupported features:
+wmi.x_access_denied
+wmi.x_wmi_authentication
+x_wmi
+wmi._wmi_watcher
+ole_object.Properties_
+
+
+	Unsupported methods:
+subclass_of
+wmi.construct_moniker
+wmi.from_1601
+wmi.get_wmi_type
+wmi.Registry
+wmi.signed_to_unsigned
+wmi.GetObject
+
+
+	Unsupported args:
+namespace, we expect the full moniker
+impersonation_level
+authority
+ShowWindow
+UserName
+
+
+	Unsupported/unneeded
+wmi.from_time
+wmi.to_time
