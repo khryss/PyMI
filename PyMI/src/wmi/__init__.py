@@ -14,6 +14,7 @@
 #    under the License.
 
 import abc
+import datetime
 import re
 import six
 import struct
@@ -332,6 +333,12 @@ class _Class(_BaseEntity):
                                     **where_clause)
 
 
+def from_1601(ns100):
+    base = datetime.datetime(1601, 1, 1)
+    # NOTE(cpurcaru): we may want to use this for event timestamps
+    return base + datetime.timedelta(microseconds=int(ns100) / 10)
+
+
 class _EventWatcher(object):
     def __init__(self, conn, wql):
         self._conn_ref = weakref.ref(conn)
@@ -387,6 +394,9 @@ class _EventWatcher(object):
                         # example in case of a creation event or simply
                         # because this field was not requested.
                         pass
+
+                    timestamp = from_1601(instance['TIME_CREATED'])
+                    object.__setattr__(event, 'timestamp', timestamp)
 
                     self._events_queue.append(event)
                 if error_details:
