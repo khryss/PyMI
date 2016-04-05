@@ -322,7 +322,14 @@ class _Class(_BaseEntity):
     @mi_to_wmi_exception
     def watch_for(self, raw_wql=None, notification_type="operation",
                   wmi_class=None, delay_secs=1, fields=[], **where_clause):
-        return _EventWatcher(self._conn, six.text_type(raw_wql))
+        if not wmi_class:
+            wmi_class = self.class_name
+        return self._conn.watch_for(raw_wql=raw_wql,
+                                    notification_type=notification_type,
+                                    wmi_class=wmi_class,
+                                    delay_secs=delay_secs,
+                                    fields=fields,
+                                    **where_clause)
 
 
 class _EventWatcher(object):
@@ -592,8 +599,44 @@ class _Connection(object):
         return op
 
     @mi_to_wmi_exception
+    def _build_event_query(self, notification_type, wmi_class,
+                           delay_secs, fields=[], **where_clause):
+        if not wmi_class:
+            raise Exception("No wmi_class provided")
+        is_extrinsic = False#"__ExtrinsicEvent" in wmi_class.derivation()
+        fields = set(['TargetInstance, TIME_CREATED'] + (fields or ['*']))
+        field_list = ", ".join(fields)
+        if is_extrinsic:
+            if where_clause:
+                where = " WHERE " + " AND ".join(["%s = '%s'" % (k, v)
+                                                  for k, v in
+                                                  where_clause.items()])
+            else:
+                where = ""
+            wql = "SELECT " + field_list + " FROM " + wmi_class + where
+        else:
+            if where_clause:
+                where = " AND " + " AND ".join(
+                    ["TargetInstance.%s = '%s'" % (k, v) for k, v in
+                     where_clause.items()])
+            else:
+                where = ""
+            wql = (
+                "SELECT %s FROM __Instance%sEvent WITHIN %d "
+                "WHERE TargetInstance ISA '%s' %s" %
+                (field_list, notification_type, delay_secs, wmi_class, where))
+
+        return wql
+
+    @mi_to_wmi_exception
     def watch_for(self, raw_wql=None, notification_type="operation",
                   wmi_class=None, delay_secs=1, fields=[], **where_clause):
+        if not raw_wql:
+            raw_wql = self._build_event_query(notification_type,
+                                              wmi_class,
+                                              delay_secs,
+                                              fields,
+                                              **where_clause)
         return _EventWatcher(self, six.text_type(raw_wql))
 
 
