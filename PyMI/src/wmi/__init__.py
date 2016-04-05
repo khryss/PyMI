@@ -239,6 +239,13 @@ class _Instance(_BaseEntity):
         class_name = self.get_class_name()
         return self._conn.get_class(class_name)
 
+    @property
+    def id(self):
+        return self.path_()
+
+    def __eq__(self, other):
+        return self.id == other.id
+
     @mi_to_wmi_exception
     def __setattr__(self, name, value):
         _, el_type, _ = self._instance.get_element(name)
@@ -696,6 +703,46 @@ def _unwrap_element(el_type, value):
             return value
 
 
+def _construct_moniker(
+    computer=None,
+    impersonation_level=None,
+    authentication_level=None,
+    authority=None,
+    privileges=None,
+    namespace=None,
+    suffix=None
+):
+    PROTOCOL = "winmgmts:"
+
+    security = []
+    if impersonation_level:
+        security.append("impersonationLevel=%s" % impersonation_level)
+    if authentication_level:
+        security.append("authenticationLevel=%s" % authentication_level)
+    #
+    # Use of the authority descriptor is invalid on the local machine
+    #
+    if authority and computer:
+        security.append("authority=%s" % authority)
+    if privileges:
+        security.append("(%s)" % ", ".join(privileges))
+
+    moniker = []
+    moniker.append(PROTOCOL)
+    if security:
+        moniker.append("{%s}!" % ",".join(security))
+    if computer:
+        moniker.append("//%s/" % computer)
+    if namespace:
+        parts = re.split(r"[/\\]", namespace)
+        if parts[0] != 'root':
+            parts.insert(0, "root")
+        moniker.append("/".join(parts))
+    if suffix:
+        moniker.append(":%s" % suffix)
+    return "".join(moniker)
+
+
 def _parse_moniker(moniker):
     PROTOCOL = "winmgmts:"
     computer_name = '.'
@@ -724,7 +771,28 @@ def _parse_moniker(moniker):
 
 
 @mi_to_wmi_exception
-def WMI(moniker="root/cimv2", privileges=None, locale_name=None):
+def WMI(computer="",
+        impersonation_level="",
+        authentication_level="",
+        authority="",
+        privileges=None,
+        moniker=None,
+        wmi=None,
+        namespace=u"root/cimv2",
+        suffix="",
+        user="",
+        password="",
+        locale_name=None):
+
+    if not moniker:
+        moniker = _construct_moniker(computer,
+                                     impersonation_level,
+                                     authentication_level,
+                                     authority,
+                                     privileges,
+                                     namespace,
+                                     suffix)
+
     computer_name, ns, class_name, key = _parse_moniker(
         moniker.replace("\\", "/"))
     conn = _Connection(computer_name=computer_name, ns=ns,
