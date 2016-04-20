@@ -98,9 +98,7 @@ class _Method(object):
 
 
 class _Path(object):
-    """
-    Provides a SWbemObjectPath replacement.
-    """
+    """Provides a SWbemObjectPath replacement."""
     def __init__(self, item):
         self._item = item
 
@@ -304,12 +302,12 @@ class _Class(_BaseEntity):
                 raise ValueError('Invalid argument')
             if not isinstance(v, list):
                 raise ValueError('Invalid argument')
-            # TODO: sanitize input
+            # TODO(): sanitize input
             fields = ", ".join(v)
         if not fields:
             fields = "*"
 
-        # TODO: sanitize input
+        # TODO(): sanitize input
         filter = " and ".join(
             "%(k)s = '%(v)s'" % {'k': k, 'v': v} for k, v in argv.items())
         if filter:
@@ -795,7 +793,7 @@ def _parse_moniker(moniker):
                     m = re.match("([^=]+)=\"(.*)\"", kv)
                     if m:
                         name, value = m.groups()
-                        # TODO: improve unescaping
+                        # TODO(): improve unescaping
                         key[name] = value.replace("//", "\\")
             else:
                 class_name = path
