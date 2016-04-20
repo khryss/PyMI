@@ -323,6 +323,14 @@ class _Class(_BaseEntity):
                 "where": where})
         return self._conn.query(wql)
 
+    @property
+    def id(self):
+        return self.path()
+
+    def __eq__(self, other):
+        return (self.id.Namespace == other.id.Namespace and
+                self.id.Class == other.id.Class)
+
     @mi_to_wmi_exception
     def new(self):
         return self._conn.new_instance_from_class(self)
@@ -579,6 +587,8 @@ class _Connection(object):
     @mi_to_wmi_exception
     def get_instance(self, class_name, key):
         c = self.get_class(class_name)
+        if not key:
+            return c
         key_instance = self.new_instance_from_class(c)
         for k, v in key.items():
             key_instance._instance[six.text_type(k)] = v
