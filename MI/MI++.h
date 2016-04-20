@@ -109,6 +109,7 @@ namespace MI
         std::shared_ptr<DestinationOptions> Clone() const;
         void SetUILocale(const std::wstring& locale);
         std::wstring GetUILocale();
+        void SetImpersonationType(MI_DestinationOptions_ImpersonationType);
         void Delete();
         virtual ~DestinationOptions();
     };

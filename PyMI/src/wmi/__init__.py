@@ -438,16 +438,24 @@ class _EventWatcher(object):
 
 class _Connection(object):
     def __init__(self, computer_name=".", ns="root/cimv2", locale_name=None,
-                 protocol=mi.PROTOCOL_WMIDCOM, cache_classes=True):
+                 protocol=mi.PROTOCOL_WMIDCOM, cache_classes=True,
+                 security=None):
         self._ns = six.text_type(ns)
         self._app = _get_app()
         self._protocol = six.text_type(protocol)
         self._computer_name = six.text_type(computer_name)
-        if locale_name:
+        if locale_name or security:
             destination_options = self._app.create_destination_options()
-            destination_options.set_ui_locale(locale_name=six.text_type(locale_name))
         else:
             destination_options = None
+        if locale_name:
+            destination_options.set_ui_locale(
+                locale_name=six.text_type(locale_name))
+        if security:
+            if security.get('impersonation'):
+                destination_options.set_impersonation_level(
+                    security['impersonation'])
+
         self._session = self._app.create_session(
             computer_name=self._computer_name,
             protocol=self._protocol,
@@ -755,14 +763,29 @@ def _construct_moniker(
 
 def _parse_moniker(moniker):
     PROTOCOL = "winmgmts:"
+    security = None
     computer_name = '.'
     namespace = None
     path = None
     class_name = None
     key = None
-    m = re.match("(?:" + PROTOCOL + r")?//([^/]+)/([^:]*)(?::(.*))?", moniker)
+    m = re.match("(?:" + PROTOCOL + r")?(?:\{)?((?<=\{)[^}]+)?(?:\}!)?(?://)?"
+                 r"((?<=//)[^/]+)?(?:/)?(root/[^:]*)?(?::?(.*))?", moniker)
     if m:
-        computer_name, namespace, path = m.groups()
+        security_list, computer_name, namespace, path = m.groups()
+        if security_list:
+            security = {}
+
+            m = re.match("(?:.*impersonationLevel=)((?<=impersonationLevel=)"
+                         "[^,]*)", security_list)
+            if m:
+                security['impersonation'], = m.groups()
+
+            if not security:
+                raise x_wmi(info="Invalid Security Argument!")
+
+        if not computer_name:
+            computer_name = u'.'
         if path:
             m = re.match(r"([^.]+)(?:\.)?((?<=.).*)?", path)
             if m:
@@ -778,7 +801,9 @@ def _parse_moniker(moniker):
                 class_name = path
     else:
         namespace = moniker
-    return (computer_name, namespace, class_name, key)
+    if not namespace:
+        namespace = u"root/cimv2"
+    return (security, computer_name, namespace, class_name, key)
 
 
 @mi_to_wmi_exception
@@ -804,10 +829,10 @@ def WMI(computer="",
                                      namespace,
                                      suffix)
 
-    computer_name, ns, class_name, key = _parse_moniker(
-        moniker.replace("\\", "/"))
+    security, computer_name, ns, class_name, key = _parse_moniker(
+        unicode(moniker.replace("\\", "/")))
     conn = _Connection(computer_name=computer_name, ns=ns,
-                       locale_name=locale_name)
+                       locale_name=locale_name, security=security)
     if not class_name:
         # Perform a simple operation to ensure the connection works.
         # This is needed for compatibility with the WMI module.

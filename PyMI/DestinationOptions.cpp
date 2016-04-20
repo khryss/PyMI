@@ -92,6 +92,38 @@ static PyObject* DestinationOptions_SetUILocale(DestinationOptions* self, PyObje
     }
 }
 
+static PyObject* DestinationOptions_SetImpersonationType(DestinationOptions* self, PyObject *args, PyObject *kwds)
+{
+    wchar_t* impersonationLevel = NULL;
+    MI_DestinationOptions_ImpersonationType impersonationType = MI_DestinationOptions_ImpersonationType_None;
+    static wchar_t *impersEnum[] = {L"default", L"none", L"identify", L"impersonate", L"delegate"};
+    static char *kwlist[] = { "impersonationLevel", NULL };
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "u", kwlist, &impersonationLevel))
+        return NULL;
+
+    for(int i=0; i<=MI_DestinationOptions_ImpersonationType_Delegate; i++)
+    {
+               if (!wcscmp(impersEnum[i], impersonationLevel))
+               {
+                       impersonationType = MI_DestinationOptions_ImpersonationType(i);
+                       break;
+               }
+    }
+    try
+    {
+        AllowThreads(&self->cs, [&]() {
+            self->destinationOptions->SetImpersonationType(impersonationType);
+        });
+        Py_RETURN_NONE;
+    }
+    catch (std::exception& ex)
+    {
+        SetPyException(ex);
+        return NULL;
+    }
+}
+
+
 static PyMemberDef DestinationOptions_members[] = {
     { NULL }  /* Sentinel */
 };
@@ -100,6 +132,7 @@ static PyMethodDef DestinationOptions_methods[] = {
     { "clone", (PyCFunction)DestinationOptions_Clone, METH_NOARGS, "Clones the DestinationOptions." },
     { "get_ui_locale", (PyCFunction)DestinationOptions_GetUILocale, METH_NOARGS, "Returns the UI locale." },
     { "set_ui_locale", (PyCFunction)DestinationOptions_SetUILocale, METH_VARARGS | METH_KEYWORDS, "Sets the UI locale." },
+    { "set_impersonation_level", (PyCFunction)DestinationOptions_SetImpersonationType, METH_VARARGS | METH_KEYWORDS, "Sets the impersonation level." },
     { NULL }  /* Sentinel */
 };
 

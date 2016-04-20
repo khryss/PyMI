@@ -681,6 +681,11 @@ std::wstring DestinationOptions::GetUILocale()
     return locale;
 }
 
+void DestinationOptions::SetImpersonationType(MI_DestinationOptions_ImpersonationType type)
+{
+    MICheckResult(MI_DestinationOptions_SetImpersonationType(&this->m_destinationOptions, type));
+}
+
 std::shared_ptr<DestinationOptions> DestinationOptions::Clone() const
 {
     MI_DestinationOptions clonedDestinationOptions;
