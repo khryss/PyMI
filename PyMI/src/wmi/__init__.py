@@ -754,15 +754,16 @@ def _parse_moniker(moniker):
     if m:
         computer_name, namespace, path = m.groups()
         if path:
-            m = re.match("([^.]+).(.*)", path)
+            m = re.match(r"([^.]+)(?:\.)?((?<=.).*)?", path)
             if m:
                 key = {}
                 class_name, kvs = m.groups()
                 for kv in kvs.split(","):
                     m = re.match("([^=]+)=\"(.*)\"", kv)
-                    name, value = m.groups()
-                    # TODO: improve unescaping
-                    key[name] = value.replace("//", "\\")
+                    if m:
+                        name, value = m.groups()
+                        # TODO: improve unescaping
+                        key[name] = value.replace("//", "\\")
             else:
                 class_name = path
     else:
